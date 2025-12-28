@@ -205,9 +205,16 @@ def shutdown():
     flash('The command has been sent! Wait for the data to update.', 'info')
     return redirect(url_for('dashboard'))
 
+with app.app_context():
+    db.create_all()
+
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    try:
+        mqtt_client.connect(MQTT_BROKER, 1883, 60)
+        mqtt_client.loop_start()
+        send_telegram_alert("🚀 Monitorovací systém je spustený!")
+    except Exception as e:
+        print(f"MQTT Connect Error: {e}")
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
-            send_telegram_alert("🚀 Monitorovací systém je spustený!")
     app.run(debug=True, use_reloader=False)
