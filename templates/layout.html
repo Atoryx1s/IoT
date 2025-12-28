@@ -1,0 +1,50 @@
+<style>
+    .hidden-row {
+        display: none;
+    }
+</style>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoT Project - {{ title }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">Smart Home IoT</a>
+            <ul class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item me-3">
+                        <span class="text-light">
+                            👤 <strong>{{ current_user.username }}</strong>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                         <a class="btn btn-outline-danger btn-sm text-white" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item me-3">
+                        <a class="btn btn-outline-success btn-sm text-white" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-success btn-sm text-white" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

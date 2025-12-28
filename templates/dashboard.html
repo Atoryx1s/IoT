@@ -1,0 +1,144 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mb-4">
+            <div class="card shadow-sm p-3">
+                <h5 class="card-title text-center">Graph of indicators</h5>
+                <div style="height: 350px; position: relative;">
+                    <canvas id="sensorChart" 
+                        data-labels='{{ labels|tojson|safe }}'
+                        data-temp='{{ temp_data|tojson|safe }}'
+                        data-hum='{{ hum_data|tojson|safe }}'></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">Last {{ readings|length }} measurements</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="readingsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>T °C</th>
+                                <th>H %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in readings %}
+                            <tr class="{% if loop.index > 5 %}hidden-row{% endif %}" 
+                                {% if loop.index > 5 %}style="display: none;"{% endif %}>
+                                <td class="small">{{ (r.date_posted + timedelta(hours=1)).strftime('%H:%M:%S') }}</td>
+                                <td>
+                                    <span class="badge {{ 'bg-danger' if r.temp > 26 else 'bg-primary' if r.temp < 18 else 'bg-success' }}">
+                                        {{ "%.1f"|format(r.temp) }}°C
+                                    </span>
+                                </td>
+                                <td>
+                                <span class="badge {{ 'bg-danger' if r.hum > 60 else 'bg-primary' if r.hum < 30 else 'bg-success' }}">
+                                    {{ "%.1f"|format(r.hum) }}%
+                                </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if readings|length > 5 %}
+                <div class="card-footer text-center">
+                    <button id="toggleBtn" class="btn btn-sm btn-outline-secondary">⬇ Show more</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 text-center mt-3">
+        <a href="{{ url_for('trigger_measurement') }}" class="btn btn-warning shadow-sm">
+            ⚡ Remote measurement
+        </a>
+        <a href="{{ url_for('shutdown') }}" class="btn btn-danger shadow-sm">
+            📴 Shutdown device
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary shadow-sm">
+            🔄 Refresh page
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+    document.getElementById('toggleBtn').addEventListener('click', function() {
+    const hiddenRows = document.querySelectorAll('.hidden-row');
+    const isExpanding = this.innerText.includes('Show');
+
+    hiddenRows.forEach(row => {
+        row.style.display = isExpanding ? 'table-row' : 'none';
+    });
+
+    if (isExpanding) {
+        this.innerText = '⬆ Hide';
+        this.classList.replace('btn-outline-secondary', 'btn-outline-danger');
+    } else {
+        this.innerText = '⬇ Show more';
+        this.classList.replace('btn-outline-danger', 'btn-outline-secondary');
+        document.getElementById('readingsTable').scrollIntoView({ behavior: 'smooth' });
+    }
+    });
+    
+    const chartElement = document.getElementById('sensorChart');
+    const labels = JSON.parse(chartElement.dataset.labels);
+    const tempData = JSON.parse(chartElement.dataset.temp);
+    const humData = JSON.parse(chartElement.dataset.hum);
+
+    const ctx = chartElement.getContext('2d');
+
+    if (labels.length > 0) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: tempData,
+                    borderColor: 'rgb(23, 162, 184)',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }, {
+                    label: 'Humidity (%)',
+                    data: humData,
+                    borderColor: 'rgb(0, 123, 255)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
+                    }       
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    } else {
+        console.log("No data for chart yet.");
+    }
+    setTimeout(() => { location.reload(); }, 30000);
+</script>
+{% endblock %}
