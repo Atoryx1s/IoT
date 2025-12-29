@@ -16,6 +16,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MQTT_BROKER = os.getenv("MQTT_BROKER")
 MQTT_TOPIC = os.getenv("MQTT_TOPIC")
+mqtt_status = {"connected": False}
 
 def send_telegram_alert(message):
     try:
@@ -26,11 +27,19 @@ def send_telegram_alert(message):
         print(f"Telegram Error: {e}")
 
 def on_connect(client, userdata, flags, rc, properties=None):
-    print(f"Connected to MQTT Broker! Result code: {rc}")
-    client.subscribe(MQTT_TOPIC)
+    if rc == 0:
+        mqtt_status["connected"] = True
+        print("Connected to MQTT Broker!")
+        client.subscribe(MQTT_TOPIC)
+    else:
+        mqtt_status["connected"] = False
 
 last_saved_data = {"temp": None, "hum": None, "time": None}
 last_alert_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+
+def on_disconnect(client, userdata, flags, rc, properties=None):
+    mqtt_status["connected"] = False
+    print(f"Disconnected from MQTT. Code: {rc}")
 
 def on_message(client, userdata, msg):
     global last_saved_data, last_alert_time
@@ -87,6 +96,7 @@ def on_message(client, userdata, msg):
 mqtt_client = mqtt_classic.Client(CallbackAPIVersion.VERSION2)
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
+mqtt_client.on_disconnect = on_disconnect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
@@ -139,7 +149,7 @@ def dashboard():
     temp_data = [r.temp for r in graph_readings]
     hum_data = [r.hum for r in graph_readings]
 
-    return render_template('dashboard.html', readings=all_readings, labels=labels,temp_data=temp_data,hum_data=hum_data,update_time=display_update_time,limit=limit)
+    return render_template('dashboard.html', readings=all_readings, labels=labels, temp_data=temp_data, hum_data=hum_data, update_time=display_update_time, limit=limit, mqtt_connected=mqtt_status["connected"])
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -205,12 +215,17 @@ def shutdown():
     flash('The command has been sent! Wait for the data to update.', 'info')
     return redirect(url_for('dashboard'))
 
+@app.route("/mqtt_status")
+def get_mqtt_status():
+    return {"connected": mqtt_status["connected"]}
+
 with app.app_context():
     db.create_all()
 
 if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     try:
-        mqtt_client.connect(MQTT_BROKER, 1883, 60)
+        mqtt_client.reconnect_delay_set(min_delay=1, max_delay=120)
+        mqtt_client.connect(MQTT_BROKER, 1883, 30)
         mqtt_client.loop_start()
         send_telegram_alert("🚀 Monitorovací systém je spustený!")
     except Exception as e:

@@ -55,6 +55,17 @@
         </div>
     </div>
 
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="mr-3">System Dashboard - </h2>
+            <span id="mqtt-status-badge" class="badge {% if mqtt_connected %}badge bg-success{% else %}badge bg-danger text-dark{% endif %}">
+                {% if mqtt_connected %}
+                    <h6><i class="fas fa-link text-dark"></i> MQTT Online </h6>
+                {% else %}
+                    <h6><i class="fas fa-unlink text-dark"></i> MQTT Offline</h6>
+                {% endif %}
+            </span>
+    </div>
+
     <div class="col-md-12 text-center mt-3">
         <a href="{{ url_for('trigger_measurement') }}" class="btn btn-warning shadow-sm">
             ⚡ Remote measurement
@@ -66,6 +77,25 @@
             🔄 Refresh page
         </a>
     </div>
+    <script>
+    function updateMqttStatus() {
+        fetch('/mqtt_status')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('mqtt-status-badge');
+                if (data.connected) {
+                    badge.className = 'badge bg-success';
+                    badge.innerHTML = '<h6><i class="fas fa-link"></i> MQTT Online</h6>';
+                } else {
+                    badge.className = 'badge bg-danger';
+                    badge.innerHTML = '<h6><i class="fas fa-unlink"></i> MQTT Offline</h6>';
+                }
+            })
+            .catch(err => console.error('Error fetching MQTT status:', err));
+    }
+
+    setInterval(updateMqttStatus, 15000);
+</script>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -139,6 +169,6 @@
     } else {
         console.log("No data for chart yet.");
     }
-    setTimeout(() => { location.reload(); }, 30000);
+    setTimeout(() => { location.reload(); }, 60000);
 </script>
 {% endblock %}
