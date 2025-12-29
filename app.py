@@ -16,6 +16,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MQTT_BROKER = os.getenv("MQTT_BROKER")
 MQTT_TOPIC = os.getenv("MQTT_TOPIC")
+MQTT_USER = os.getenv("MQTT_USER")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 mqtt_status = {"connected": False}
 
 def send_telegram_alert(message):
@@ -88,12 +90,17 @@ def on_message(client, userdata, msg):
             send_telegram_alert(message)
             
             last_saved_data = {"temp": temp, "hum": hum, "time": now}
-            print(f"DONE & ALERT SENT: T={temp} H={hum}")
             
     except Exception as e:
         print(f"MQTT Error: {e}")
 
 mqtt_client = mqtt_classic.Client(CallbackAPIVersion.VERSION2)
+
+if MQTT_USER and MQTT_PASSWORD:
+    mqtt_client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+
+    mqtt_client.tls_set()
+
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
 mqtt_client.on_disconnect = on_disconnect
@@ -101,10 +108,6 @@ mqtt_client.on_disconnect = on_disconnect
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
-
-if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
-    mqtt_client.connect(MQTT_BROKER, 1883, 60)
-    mqtt_client.loop_start()
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -229,7 +232,7 @@ with app.app_context():
 if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     try:
         mqtt_client.reconnect_delay_set(min_delay=1, max_delay=120)
-        mqtt_client.connect(MQTT_BROKER, 1883, 30)
+        mqtt_client.connect(MQTT_BROKER, 8883, 60)
         mqtt_client.loop_start()
         send_telegram_alert("🚀 Monitorovací systém je spustený!")
     except Exception as e:
