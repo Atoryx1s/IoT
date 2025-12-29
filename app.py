@@ -219,6 +219,10 @@ def shutdown():
 def get_mqtt_status():
     return {"connected": mqtt_status["connected"]}
 
+@app.route("/ping")
+def ping():
+    return "OK", 200
+
 with app.app_context():
     db.create_all()
 
