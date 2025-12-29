@@ -9,8 +9,8 @@ paho-mqtt==2.1.0
 
 # Database & Environment
 python-dotenv==1.0.0
-requests==2.31.0
+requests>=2.32.4
 
 # Production Server (for future implementation)
-gunicorn==21.2.0
+gunicorn>=23.0.0
 psycopg2-binary==2.9.9
