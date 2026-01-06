@@ -232,7 +232,12 @@ def ping():
     return "OK", 200
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        print("DATABASE CONNECTION SUCCESSFUL: PostgreSQL is ready!")
+        db.create_all()
+    except Exception as e:
+        print(f"DATABASE CONNECTION FAILED: {e}")
 
 if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     try:
