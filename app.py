@@ -220,7 +220,7 @@ def trigger_measurement():
 def shutdown():
     command = json.dumps({"command": "shutdown"})
     mqtt_client.publish(MQTT_TOPIC, command)
-    flash('The command has been sent! Wait for the data to update.', 'info')
+    flash('The command has been sent!', 'info')
     return redirect(url_for('dashboard'))
 
 @app.route("/mqtt_status")
