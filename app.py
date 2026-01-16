@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, flash, redirect, request
+from flask import Flask, render_template, url_for, flash, redirect, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
 from flask_bcrypt import Bcrypt
@@ -85,9 +85,6 @@ def on_message(client, userdata, msg):
             new_reading = SensorData(temp=temp, hum=hum, user_id=1) 
             db.session.add(new_reading)
             db.session.commit()
-
-            message = f"📊 Prijaté nové údaje:\n🌡 Teplota: {temp}°C\n💧 Vlhkosť: {hum}%"
-            send_telegram_alert(message)
             
             last_saved_data = {"temp": temp, "hum": hum, "time": now}
             
@@ -230,6 +227,30 @@ def get_mqtt_status():
 @app.route("/ping")
 def ping():
     return "OK", 200
+
+@app.route('/api/sensor_data')
+def sensor_data_api():
+    readings = SensorData.query.order_by(SensorData.date_posted.desc()).limit(10).all()
+    
+    graph_readings = readings[::-1]
+    
+    data = {
+        "labels": [(r.date_posted + timedelta(hours=1)).strftime('%H:%M:%S') for r in graph_readings],
+        "temp": [round(r.temp, 1) for r in graph_readings],
+        "hum": [round(r.hum, 1) for r in graph_readings],
+        "table_html": "".join([
+            f'<tr class="{"hidden-row" if i >= 5 else ""}" style="{"display: none;" if i >= 5 else ""}">'
+            f'<td class="small">{(r.date_posted + timedelta(hours=1)).strftime("%H:%M:%S")}</td>'
+            f'<td><span class="badge {"bg-danger" if r.temp > 26 else "bg-primary" if r.temp < 18 else "bg-success"}">{r.temp:.1f}°C</span></td>'
+            f'<td><span class="badge {"bg-danger" if r.hum > 60 else "bg-primary" if r.hum < 30 else "bg-success"}">{r.hum:.1f}%</span></td>'
+            f'</tr>' for i, r in enumerate(readings)
+        ])
+    }
+    return jsonify(data)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 with app.app_context():
     try:

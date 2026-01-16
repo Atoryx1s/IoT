@@ -6,6 +6,9 @@
             <div class="card shadow-sm p-3">
                 <h5 class="card-title text-center">Graph of indicators</h5>
                 <div style="height: 350px; position: relative;">
+                    <div id="graph-skeleton" class="skeleton chart-loader">
+                        <span class="text-muted">⚡ Waiting for first six measurement...</span>
+                    </div>
                     <canvas id="sensorChart" 
                         data-labels='{{ labels|tojson|safe }}'
                         data-temp='{{ temp_data|tojson|safe }}'
@@ -124,51 +127,103 @@
     const tempData = JSON.parse(chartElement.dataset.temp);
     const humData = JSON.parse(chartElement.dataset.hum);
 
-    const ctx = chartElement.getContext('2d');
+   const ctx = document.getElementById('sensorChart').getContext('2d');
+   let sensorChart;
 
-    if (labels.length > 0) {
-        new Chart(ctx, {
+   function initOrUpdateChart(data) {
+if (!data.labels || data.labels.length === 0) {
+        document.getElementById('graph-skeleton').classList.remove('d-none');
+        return;
+    }
+
+    document.getElementById('graph-skeleton').classList.add('d-none');
+
+    if (sensorChart) {
+        sensorChart.data.labels = data.labels;
+        sensorChart.data.datasets[0].data = data.temp;
+        sensorChart.data.datasets[1].data = data.hum;
+        sensorChart.update();
+    } else {
+        sensorChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: data.labels,
                 datasets: [{
                     label: 'Temperature (°C)',
-                    data: tempData,
-                    borderColor: 'rgb(23, 162, 184)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    data: data.temp,
+                    borderColor: 'rgb(255, 61, 61)',
+                    backgroundColor: 'rgba(255, 61, 61, 0.1)',
                     fill: true,
-                    tension: 0.3
+                    tension: 0.4,
+                    pointRadius: 5
                 }, {
                     label: 'Humidity (%)',
-                    data: humData,
+                    data: data.hum,
                     borderColor: 'rgb(0, 123, 255)',
                     backgroundColor: 'rgba(0, 123, 255, 0.1)',
                     fill: true,
-                    tension: 0.3
+                    tension: 0.4,
+                    pointRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 1000, easing: 'easeInOutQuart' },
                 scales: {
-                    y: { 
-                        beginAtZero: false,
-                        title: {
-                            display: true,
-                            text: 'Value'
-                        }
-                    }       
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
+                    y: { beginAtZero: false, grace: '20%' },
+                    x: { offset: true }
                 }
             }
         });
-    } else {
-        console.log("No data for chart yet.");
     }
-    setTimeout(() => { location.reload(); }, 60000);
+}
+
+function refreshDashboard() {
+    fetch('/api/sensor_data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.labels.length > 0) {
+                initOrUpdateChart(data);
+                document.querySelector('#readingsTable tbody').innerHTML = data.table_html;
+            }
+        })
+        .catch(err => console.error('Error Update:', err));
+}
+
+const initialData = {
+    labels: JSON.parse(document.getElementById('sensorChart').dataset.labels),
+    temp: JSON.parse(document.getElementById('sensorChart').dataset.temp),
+    hum: JSON.parse(document.getElementById('sensorChart').dataset.hum)
+};
+
+if (initialData.labels.length > 0) {
+    initOrUpdateChart(initialData);
+}
+
+setInterval(refreshDashboard, 30000);
+
+</script>
+<div id="chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    <button onclick="toggleChat()" class="btn btn-dark rounded-circle shadow-lg" style="width: 60px; height: 60px;">
+        💬
+    </button>
+    <div id="chat-window" class="card shadow-lg d-none" style="position: absolute; bottom: 70px; right: 0; width: 250px;">
+        <div class="card-header bg-dark text-white">Support Bot</div>
+        <div class="card-body small">
+            <p>Hello! If you have questions about how the IoT system works:</p>
+            <hr>
+            <p>📞 <strong>Num:</strong> +421 99 000 88 00</p>
+            <p>📧 <strong>Email:</strong> support@iot.com</p>
+            <a href="https://t.me/support" class="btn btn-sm btn-primary w-100">Write on Telegram</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleChat() {
+    const chat = document.getElementById('chat-window');
+    chat.classList.toggle('d-none');
+}
 </script>
 {% endblock %}
