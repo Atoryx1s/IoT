@@ -241,7 +241,7 @@ def sensor_data_api():
         "table_html": "".join([
             f'<tr class="{"hidden-row" if i >= 5 else ""}" style="{"display: none;" if i >= 5 else ""}">'
             f'<td class="small">{(r.date_posted + timedelta(hours=1)).strftime("%H:%M:%S")}</td>'
-            f'<td><span class="badge {"bg-danger" if r.temp > 26 else "bg-primary" if r.temp < 18 else "bg-success"}">{r.temp:.1f}°C</span></td>'
+            f'<td><span class="badge {"bg-danger" if r.temp > 30 else "bg-primary" if r.temp < 18 else "bg-success"}">{r.temp:.1f}°C</span></td>'
             f'<td><span class="badge {"bg-danger" if r.hum > 60 else "bg-primary" if r.hum < 30 else "bg-success"}">{r.hum:.1f}%</span></td>'
             f'</tr>' for i, r in enumerate(readings)
         ])
