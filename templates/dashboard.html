@@ -35,7 +35,7 @@
                                 {% if loop.index > 5 %}style="display: none;"{% endif %}>
                                 <td class="small">{{ (r.date_posted + timedelta(hours=1)).strftime('%H:%M:%S') }}</td>
                                 <td>
-                                    <span class="badge {{ 'bg-danger' if r.temp > 26 else 'bg-primary' if r.temp < 18 else 'bg-success' }}">
+                                    <span class="badge {{ 'bg-danger' if r.temp > 30 else 'bg-primary' if r.temp < 18 else 'bg-success' }}">
                                         {{ "%.1f"|format(r.temp) }}°C
                                     </span>
                                 </td>
